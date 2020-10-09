@@ -1,24 +1,40 @@
-#![feature(box_patterns)]
 
 extern crate rkdb;
 
+use std::ffi;
 use rkdb::{
-    api,
-    kbindings::*
+  api,
+  kapi,
+  kbindings,
+  kbindings::*
 };
 
-// Attempts to connect to localhost port 12001, runs a query and prints result
 fn main() {
-    let handle = match api::Handle::connect("localhost", 12001, "user") {
-        Ok(h) => h,
-        Err(e) => { println!("{}", e); std::process::exit(1) }
-    };
-    let query = "([]a:til 10;b:reverse til 10;c:10?`4;d:{x#.Q.a}each til 10)";
-    let k = match handle.query(query) {
-        Ok(h) => h,
-        Err(e) => { println!("{}", e); std::process::exit(1) }
-    };
-    handle.close();
-    let KOwned(k) = k;
-    println!("{:?}", KVal::new(k));
+
+  let host = "127.0.0.1";
+  let username = "username";
+  let port = 6000;
+  let chost = ffi::CString::new(host).unwrap();
+  let cuser = ffi::CString::new(username).unwrap();
+  let handle = match unsafe { kapi::khpu(chost.as_ptr(), port, cuser.as_ptr()) } {
+    h if h < 0 => { println!("{}", "ERROR: Connection failure".to_string()); std::process::exit(1); },
+    0 => { println!("{}", "ERROR: Bad credentials".to_string()); std::process::exit(1); },
+    h => h
+  };
+
+  let query = ".u.upd";
+  let cquery = ffi::CString::new(query).unwrap();
+  let cnum = KVal::new(serial(klong(64)));
+  let cnum2 = KVal::new(serial(klong(128)));
+  let cnums:[KVal;2] = [cnum, cnum2];
+  let clist = kmixed(&cnums);
+  let kptr = unsafe { kapi::k(handle, cquery.as_ptr(), clist, kvoid()) };
+  if kptr.is_null() {
+    println!("{}", "ERROR: Query failed".to_string());
+    std::process::exit(1);
+  }
+  println!("{}", "Dispatched!".to_string());
+
+  unsafe { kapi::kclose(handle) };
 }
+

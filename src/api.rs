@@ -24,7 +24,7 @@ impl Error for KError {
 
 impl fmt::Display for KError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Kind: {:?}, Desc: {}", self.kind, self.description())
+        write!(f, "Kind: {:?}, Desc: {}", self.kind, self.to_string())
     }
 }
 
@@ -40,7 +40,7 @@ impl KError {
 impl convert::From<io::Error> for KError {
     fn from(err: io::Error) -> KError {
         KError {
-            desc: err.description().to_string(),
+            desc: err.to_string(),
             kind: KErr::IOErr
         }
     }
@@ -49,7 +49,7 @@ impl convert::From<io::Error> for KError {
 impl convert::From<mpsc::RecvError> for KError {
     fn from(err: mpsc::RecvError) -> KError {
         KError {
-            desc: err.description().to_string(),
+            desc: err.to_string(),
             kind: KErr::RecvErr
         }
     }
@@ -73,6 +73,7 @@ pub enum KErr {
     WrongType
 }
 
+#[allow(dead_code)]
 pub struct Handle {
     host: String,
     port: i32,
@@ -81,9 +82,9 @@ pub struct Handle {
 }
 
 impl Handle {
-    pub fn connect(host: &str, port: i32, username: &str) -> Result<Handle, Box<Error>> {
-        let chost = try!(ffi::CString::new(host));
-        let cuser = try!(ffi::CString::new(username));
+    pub fn connect(host: &str, port: i32, username: &str) -> Result<Handle, Box<dyn Error>> {
+        let chost = ffi::CString::new(host)?;
+        let cuser = ffi::CString::new(username)?;
         let handle = match unsafe { kapi::khpu(chost.as_ptr(), port, cuser.as_ptr()) } {
             h if h < 0 => return Err(Box::new(KError::new("Could not connect".to_string(), KErr::ConnectionFailed))),
             0 => return Err(Box::new(KError::new("Wrong credentials".to_string(), KErr::AuthenticationFailed))),
@@ -97,8 +98,8 @@ impl Handle {
         })
     }
 
-    pub fn query(&self, query: &str) -> Result<KOwned, Box<Error>> {
-        let cquery = try!(ffi::CString::new(query));
+    pub fn query(&self, query: &str) -> Result<KOwned, Box<dyn Error>> {
+        let cquery = ffi::CString::new(query)?;
         let kptr = unsafe { kapi::k(self.handle, cquery.as_ptr(), kvoid()) };
         if kptr.is_null() {
             return Err(Box::new(KError::new("Query failed".to_string(), KErr::QueryFailed)))
