@@ -3,7 +3,7 @@
 #[cfg(feature="api")]
 #[link(name="kdb")]
 
-use types;
+use types::*;
 
 extern "C" {
     pub fn ktn(arg1: I, arg2: J) -> *const K;      // create list
