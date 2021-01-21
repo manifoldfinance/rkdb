@@ -240,6 +240,10 @@ pub fn valid_stream(k: &K) -> bool {
     unsafe { okx(k) == 1 }
 }
 
+pub fn serial(k: &K) -> &K  {
+    unsafe { &*b9(3, k) }
+}
+
 pub fn deserial(k: &K) -> &K  {
     unsafe { &*d9(k) }
 }
@@ -255,7 +259,7 @@ pub fn kerror(err: &str) -> &'static K {
 }
 
 pub fn kbool(b: bool) -> &'static K {
-    unsafe { &*kb( { if b { 1 } else { 0 } } ) }
+    unsafe { &*kb( if b { 1 } else { 0 } ) }
 }
 
 pub fn kbyte(b: u8) -> &'static K {
